@@ -18,7 +18,9 @@ httpServer.listen(port, () => {
 const io = socketio(httpServer);
 
 io.on("connection", (socket)=>{
-    console.log("a user is connected with id: ",socket.id );
+    // console.log("a user is connected with id: ",socket.id );
+
+    //receive/send offer
     socket.on("offer", data =>{
         console.log("offer received from:" ,data.fromSocketId );
         console.log("sending offer to ", data.toSocketId);
@@ -26,4 +28,12 @@ io.on("connection", (socket)=>{
         // io.emit('offer', data)
 
     })
+
+    //Receive and send answer
+    socket.on("answer", data =>{
+        io.to(data.destination).emit('answer',data)
+
+
+    })
+
 })

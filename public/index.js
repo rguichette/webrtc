@@ -2,6 +2,7 @@ const socket = io()
 
 const fromSocket = document.getElementById("userId")
 const localVideo = document.getElementById("localVideo")
+const remoteVideo = document.getElementById("remoteVideo")
 const call = document.getElementById("call")
 const mute = document.getElementById("mute")
 const stop = document.getElementById("stop")
@@ -70,8 +71,46 @@ const createOffer = async ()=>{
     }
 }
 
+//create answer 
+const createAnswer = async(destination) =>{
+    let stream = await openMediaDevices();
+    tracks.forEach(track => peer.addTrack(track))
+
+    let answer = await peer.createAnswer()
+    peer.setLocalDescription(new RTCSessionDescription(answer));
+
+    //send answer to server
+    socket.emit('answer', {'answer':answer, 'destination': destination})
+}
+
 //receive offer
-socket.on("offer", data =>console.log(data))
+socket.on("offer", data =>{
+    
+    // console.log(data)
+    peer.setRemoteDescription(data.offer)
+    console.log(peer)
+    createAnswer(data.fromSocketId)
+
+    peer.ontrack = e =>{
+        remoteVideo.srcObject = e.streams[0];
+    
+        }
+
+})
+
+//receive answer
+socket.on('answer', data =>{
+    peer.setRemoteDescription(data.answer)
+    
+    peer.ontrack = e =>{
+        console.log("remote stream is : ", e);
+    
+        remoteVideo.srcObject = e.streams[0];
+
+    }
+    
+    console.log(data)
+})
 
 
 //start a call
@@ -82,7 +121,7 @@ call.onclick = ()=> {
     createOffer()
     mute.onclick =  muteTracks;
     unMute.onclick = unMuteTracks;
-    stop.onclick = stopTracks;
+    stop.onclick = stopTracks();
     
 }
 
@@ -102,7 +141,7 @@ const unMuteTracks = ()=>{
 }
 
 //stop tracks
-const stopTracks =() =>{
+const stopTracks = () =>{
     tracks.forEach(track =>track.stop())
 }
 
