@@ -19,4 +19,11 @@ const io = socketio(httpServer);
 
 io.on("connection", (socket)=>{
     console.log("a user is connected with id: ",socket.id );
+    socket.on("offer", data =>{
+        console.log("offer received from:" ,data.fromSocketId );
+        console.log("sending offer to ", data.toSocketId);
+        io.to(data.toSocketId).emit('offer', data)
+        // io.emit('offer', data)
+
+    })
 })
