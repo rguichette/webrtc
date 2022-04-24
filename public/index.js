@@ -59,6 +59,14 @@ const createOffer = async ()=>{
         peer.setLocalDescription(new RTCSessionDescription(offer));
         // console.log("peer - offer",peer, offer.sdp);
 
+        //start ICE candidate for offer
+        peer.onicecandidate = (e)=>{
+            if(e.candidate){
+                console.log(e.candidate);
+                socket.emit('callerCandidate',{"candidate": e.candidate, "fromSocketId": fromSocketId, "toSocketId": toSocketId} )
+            }
+        }
+
         //person offer being sent to: 
         toSocketId = toSocket.value
         //send offer to server 
@@ -79,6 +87,14 @@ const createAnswer = async(destination) =>{
     let answer = await peer.createAnswer()
     peer.setLocalDescription(new RTCSessionDescription(answer));
 
+    //ice for answer
+    peer.onicecandidate = (e)=>{
+        if(e.candidate){
+            console.log(e.candidate);
+            socket.emit('calleeCandidate',{"candidate": e.candidate, 'destination': destination} )
+        }
+    }
+
     //send answer to server
     socket.emit('answer', {'answer':answer, 'destination': destination})
 }
@@ -89,10 +105,14 @@ socket.on("offer", data =>{
     // console.log(data)
     peer.setRemoteDescription(data.offer)
     console.log(peer)
+
+    let stream = new MediaStream()
+
     createAnswer(data.fromSocketId)
 
     peer.ontrack = e =>{
-        remoteVideo.srcObject = e.streams[0];
+        stream.addTrack(e.track)
+        remoteVideo.srcObject = stream;
     
         }
 
@@ -102,13 +122,16 @@ socket.on("offer", data =>{
 socket.on('answer', data =>{
     peer.setRemoteDescription(data.answer)
     
+    let stream = new MediaStream()
+
+
     peer.ontrack = e =>{
         console.log("remote stream is : ", e);
-    
-        remoteVideo.srcObject = e.streams[0];
+        stream.addTrack(e.track);
+        remoteVideo.srcObject = stream;
 
     }
-    
+
     console.log(data)
 })
 
@@ -145,5 +168,20 @@ const stopTracks = () =>{
     tracks.forEach(track =>track.stop())
 }
 
+
+//caller Candidate
+socket.on('callerCandidate',data =>{
+    console.log(data);
+    peer.addIceCandidate(data)
+})
+//the line 'on'above and below this act like an exchange of information 🔄
+
+//callee Candidate
+socket.on('calleeCandidate',data =>{
+console.log(data);
+
+peer.addIceCandidate(data)
+
+})
 
 
